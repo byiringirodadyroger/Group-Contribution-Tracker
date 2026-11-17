@@ -11,7 +11,7 @@ npm.cmd run dev
 ```
 
 The Vite development server proxies `/api` and `/socket.io` to
-`http://localhost:5000`. Start the API server separately before signing in.
+`http://localhost:4000`. Start the API server separately before signing in.
 
 For a deployed API, set `VITE_API_URL` to its HTTPS origin before building
 (for example, in the Vercel project environment variables). The API must allow

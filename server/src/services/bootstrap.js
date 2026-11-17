@@ -22,8 +22,8 @@ async function bootstrap({ username, password, memberNames }) {
     error.status = 400;
     throw error;
   }
-  if (!Array.isArray(memberNames) || memberNames.length !== 7) {
-    const error = new Error('Exactly seven member names are required for setup');
+  if (!Array.isArray(memberNames) || memberNames.length !== 6) {
+    const error = new Error('Exactly six member names are required for setup');
     error.status = 400;
     throw error;
   }

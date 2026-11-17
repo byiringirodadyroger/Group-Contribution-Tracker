@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const User = require('./models/User');
 const { loadConfig } = require('./config/env');
-const { restrictMutationOrigins } = require('./middleware/origin');
+const { restrictClientIp, restrictMutationOrigins } = require('./middleware/origin');
 const authRoutes = require('./routes/auth');
 const dataRoutes = require('./routes/data');
 const paymentRoutes = require('./routes/payments');
@@ -45,6 +45,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
+app.use(restrictClientIp);
 app.use(restrictMutationOrigins);
 
 const authLimiter = rateLimit({

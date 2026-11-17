@@ -11,6 +11,11 @@ const requiredSecret = (key) => {
   return value;
 };
 
+const parseCsvList = (value) => (value || '')
+  .split(/[\n,]/)
+  .map((entry) => entry.trim())
+  .filter(Boolean);
+
 function loadConfig() {
   const port = Number.parseInt(process.env.PORT || '4000', 10);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -31,17 +36,24 @@ function loadConfig() {
   }
 
   const regularNames = (process.env.REGULAR_MEMBER_NAMES ||
-    'Jean Bosco,Ildebrand,Vivant,Shema,Renne,Shaffy')
+    'Jean Bosco,Ildebrand,Vivant,Shema,Renne Shaffy')
     .split(',')
     .map((name) => name.trim())
     .filter(Boolean);
-  if (regularNames.length !== 6 || regularNames.some((name) => name.toLowerCase() === 'roger')) {
-    throw new Error('REGULAR_MEMBER_NAMES must contain six names and must not include Roger');
+  if (regularNames.length !== 5 || regularNames.some((name) => name.toLowerCase() === 'roger')) {
+    throw new Error('REGULAR_MEMBER_NAMES must contain five names and must not include Roger');
   }
   const normalizedNames = ['Roger', ...regularNames].map((name) => name.trim().replace(/\s+/g, ' ').toLowerCase());
-  if (new Set(normalizedNames).size !== 7) {
+  if (new Set(normalizedNames).size !== 6) {
     throw new Error('REGULAR_MEMBER_NAMES must be unique');
   }
+
+  const allowedIps = Array.from(new Set([
+    ...parseCsvList(process.env.ALLOWED_IPS),
+    ...parseCsvList(process.env.ALLOWED_IP),
+    ...parseCsvList(process.env.APP_IP),
+    ...parseCsvList(process.env.SERVER_IP)
+  ])).map((ip) => ip.trim());
 
   return {
     nodeEnv: process.env.NODE_ENV || 'development',
@@ -61,6 +73,7 @@ function loadConfig() {
       .split(',')
       .map((origin) => origin.trim())
       .filter(Boolean),
+    allowedIps,
     memberNames: ['Roger', ...regularNames]
   };
 }

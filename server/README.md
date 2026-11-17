@@ -1,7 +1,7 @@
 ﻿# Group Contribution Tracker API
 
 Node.js, Express, MongoDB/Mongoose, and Socket.IO backend for an RWF contribution
-group. It starts with seven member profiles, and administrators can add more.
+group. It starts with six member profiles, and administrators can add more.
 All API routes are under `/api`. This directory is
 self-contained; the frontend should use the deployed API origin as its base URL.
 
@@ -15,13 +15,16 @@ self-contained; the frontend should use the deployed API origin as its base URL.
 - Set `CORS_ORIGINS` to the exact frontend origin(s), comma-separated, including
   scheme and any port. The Vite development default is
   `http://localhost:5173`. The API uses credentialed CORS; do not use `*`.
+- Optional: set `ALLOWED_IPS` to a comma- or newline-separated allowlist of
+  trusted client IPs. When set, the API rejects requests from any other IP after
+  honoring `X-Forwarded-For` and `TRUST_PROXY` when enabled.
 - For a frontend and API on different sites, configure HTTPS, set
   `COOKIE_SAME_SITE=none` and `COOKIE_SECURE=true`. Same-site local development
   defaults to `lax` and non-secure cookies. Set `COOKIE_DOMAIN` only when needed.
-- `REGULAR_MEMBER_NAMES` optionally sets the six regular members. It must
-  contain exactly six distinct names other than Roger. The defaults are
-  `Jean Bosco`, `Ildebrand`, `Vivant`, `Shema`, `Renne`, and `Shaffy`; Roger is
-  the seventh member and administrator. Each seeded member has a fixed target of
+- `REGULAR_MEMBER_NAMES` optionally sets the five regular members. It must
+  contain exactly five distinct names other than Roger. The defaults are
+  `Jean Bosco`, `Ildebrand`, `Vivant`, `Shema`, and `Renne Shaffy`; Roger is
+  the sixth member and administrator. Each seeded member has a fixed target of
   20,000 RWF.
 - If TLS terminates at a trusted reverse proxy and rate limits should use the
   forwarded client IP, set `TRUST_PROXY=true` and configure the proxy to
@@ -41,7 +44,7 @@ For local development, start MongoDB and use `npm run dev`. The server binds to
 
 ## One-time initial setup
 
-The database must be empty. Create Roger's administrator account and all seven
+The database must be empty. Create Roger's administrator account and all six
 member records with:
 
 ```sh

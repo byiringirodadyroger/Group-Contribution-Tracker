@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const http = require('node:http');
+const path = require('node:path');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const User = require('./models/User');
@@ -73,6 +74,16 @@ app.use('/api/auth', authRoutes);
 app.use('/api', dataRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+
+const clientDist = path.resolve(__dirname, '../../client/dist');
+app.use(express.static(clientDist));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path === '/api') {
+    return next();
+  }
+  return res.sendFile(path.join(clientDist, 'index.html'));
+});
+
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));
 app.use((error, req, res, next) => {
   if (res.headersSent) return next(error);

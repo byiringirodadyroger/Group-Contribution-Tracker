@@ -54,6 +54,10 @@ function loadConfig() {
     ...parseCsvList(process.env.APP_IP),
     ...parseCsvList(process.env.SERVER_IP)
   ])).map((ip) => ip.trim());
+  const corsOrigins = Array.from(new Set([
+    ...parseCsvList(process.env.CORS_ORIGINS),
+    process.env.RENDER_EXTERNAL_URL
+  ].filter(Boolean).map((origin) => origin.trim().replace(/\/+$/, ''))));
 
   return {
     nodeEnv: process.env.NODE_ENV || 'development',
@@ -69,10 +73,7 @@ function loadConfig() {
       path: '/',
       ...(process.env.COOKIE_DOMAIN ? { domain: process.env.COOKIE_DOMAIN } : {})
     },
-    corsOrigins: (process.env.CORS_ORIGINS || 'http://localhost:5173')
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean),
+    corsOrigins: corsOrigins.length > 0 ? corsOrigins : ['http://localhost:5173'],
     allowedIps,
     memberNames: ['Roger', ...regularNames]
   };

@@ -13,7 +13,9 @@ const keys = [
   'ALLOWED_IPS',
   'ALLOWED_IP',
   'APP_IP',
-  'SERVER_IP'
+  'SERVER_IP',
+  'CORS_ORIGINS',
+  'RENDER_EXTERNAL_URL'
 ];
 
 function withEnvironment(values, callback) {
@@ -58,5 +60,18 @@ test('accepts a trusted IP allowlist for inbound requests', () => {
     ALLOWED_IPS: '127.0.0.1, 203.0.113.8\n198.51.100.12'
   }, () => {
     assert.deepEqual(loadConfig().allowedIps, ['127.0.0.1', '203.0.113.8', '198.51.100.12']);
+  });
+});
+
+test('includes the Render external URL in allowed CORS origins', () => {
+  withEnvironment({
+    JWT_SECRET: 's'.repeat(32),
+    CORS_ORIGINS: 'https://old.example.com',
+    RENDER_EXTERNAL_URL: 'https://group-contribution-tracker.onrender.com'
+  }, () => {
+    assert.deepEqual(loadConfig().corsOrigins, [
+      'https://old.example.com',
+      'https://group-contribution-tracker.onrender.com'
+    ]);
   });
 });

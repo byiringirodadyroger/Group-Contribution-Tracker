@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const http = require('node:http');
+const fs = require('node:fs');
 const path = require('node:path');
 const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
@@ -81,7 +82,13 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path === '/api') {
     return next();
   }
-  return res.sendFile(path.join(clientDist, 'index.html'));
+  const indexPath = path.join(clientDist, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    return res.status(503).json({
+      error: 'Frontend is not available. Rebuild the client and redeploy.'
+    });
+  }
+  return res.sendFile(indexPath);
 });
 
 app.use((req, res) => res.status(404).json({ error: 'Not found' }));

@@ -11,7 +11,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [form, setForm] = useState({ username: "", password: "" });
-  const [error, setError] = useState(params.get("status") === "pending" ? "Your account is awaiting administrator approval. You can sign in once it has been approved." : "");
+  const [error, setError] = useState(params.get("status") === "pending"
+    ? "Your account is awaiting administrator approval. You can sign in once it has been approved."
+    : params.get("status") === "password-reset" ? "Your password was reset. Sign in with your new password." : "");
   const [busy, setBusy] = useState(false);
 
   async function submit(event) {
@@ -40,10 +42,10 @@ export default function LoginPage() {
       <div className="w-full max-w-[420px]">
         <div className="mb-10 lg:hidden"><span className="grid h-11 w-11 place-items-center rounded-xl bg-forest-600 text-white"><Activity size={23} /></span></div>
         <p className="text-sm font-semibold text-forest-600">Welcome back</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Sign in to your account</h2>        <p className="mt-2 text-sm text-slate-500">Sign in to your group account. New members can request access after creating an account.</p>
-        <Alert className="mt-6">{error}</Alert>
+        <Alert className="mt-6" kind={params.get("status") === "password-reset" ? "success" : "error"}>{error}</Alert>
         <form className="mt-7 space-y-5" onSubmit={submit}>
           <label className="block text-sm font-semibold text-slate-700">Username or email address<input className="field mt-2" autoComplete="username" required value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></label>
-          <label className="block text-sm font-semibold text-slate-700">Password<div className="relative mt-2"><LockKeyhole className="absolute left-3 top-3 text-slate-400" size={17} /><PasswordInput className="field pl-10 pr-12" autoComplete="current-password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div></label>
+          <label className="block text-sm font-semibold text-slate-700"><span className="flex items-center justify-between">Password<Link to="/forgot-password" className="text-xs font-semibold text-forest-700 hover:underline">Forgot password?</Link></span><div className="relative mt-2"><LockKeyhole className="absolute left-3 top-3 text-slate-400" size={17} /><PasswordInput className="field pl-10 pr-12" autoComplete="current-password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div></label>
           <button className="button-primary w-full" disabled={busy}>{busy ? <Spinner /> : <>Sign in <ArrowRight size={17} /></>}</button>
         </form>
         <p className="mt-7 text-center text-sm text-slate-500">New to this group? <Link to="/register" className="font-semibold text-forest-700 hover:underline">Create a member account</Link></p>

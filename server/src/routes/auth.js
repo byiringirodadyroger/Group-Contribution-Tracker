@@ -1,12 +1,16 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('node:crypto');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const rateLimit = require('express-rate-limit');
 const Member = require('../models/Member');
+const PasswordResetToken = require('../models/PasswordResetToken');
 const User = require('../models/User');
 const SetupState = require('../models/SetupState');
 const { authenticate, getToken } = require('../middleware/auth');
 const { bootstrap } = require('../services/bootstrap');
+const { sendPasswordResetEmail } = require('../services/email');
 const { loadConfig } = require('../config/env');
 const {
   normalizeName,
@@ -20,6 +24,18 @@ const {
 const router = express.Router();
 const config = loadConfig();
 const cookieName = 'access_token';
+const passwordResetRequestLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false
+});
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false
+});
 
 function publicUser(user) {
   return {
@@ -142,6 +158,79 @@ router.post('/login', async (req, res, next) => {
     await user.save();
     setAuthCookie(res, user);
     res.json({ user: publicUser(user) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/forgot-password', passwordResetRequestLimiter, async (req, res, next) => {
+  try {
+    const email = typeof (req.body || {}).email === 'string' ? req.body.email.trim() : '';
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Enter a valid email address' });
+    }
+
+    if (!config.smtp.host || !config.smtp.user || !config.smtp.password || !config.smtp.from) {
+      return res.status(503).json({ error: 'Password reset email is not configured' });
+    }
+
+    const user = await User.findOne({ username: normalizeUsername(email) });
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      await PasswordResetToken.deleteMany({ userId: user._id });
+      await PasswordResetToken.create({
+        userId: user._id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000)
+      });
+      try {
+        await sendPasswordResetEmail({ config, email: user.username, token });
+      } catch (error) {
+        await PasswordResetToken.deleteOne({ tokenHash });
+        console.error('Unable to send password reset email:', error.message);
+      }
+    }
+
+    res.json({
+      message: 'If an account exists for that email, password reset instructions will be sent.'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body || {};
+    if (typeof token !== 'string' || !/^[a-f0-9]{64}$/i.test(token) ||
+        !validatePassword(newPassword)) {
+      return res.status(400).json({ error: 'The reset link is invalid or expired' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const resetToken = await PasswordResetToken.findOneAndUpdate(
+      { tokenHash, expiresAt: { $gt: new Date() }, usedAt: null },
+      { $set: { usedAt: new Date() } },
+      { new: true }
+    );
+    if (!resetToken) {
+      return res.status(400).json({ error: 'The reset link is invalid or expired' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const user = await User.findByIdAndUpdate(
+      resetToken.userId,
+      { $set: { passwordHash }, $inc: { tokenVersion: 1 } },
+      { new: true }
+    );
+    await PasswordResetToken.deleteMany({ userId: resetToken.userId });
+    if (!user) {
+      return res.status(400).json({ error: 'The reset link is invalid or expired' });
+    }
+    req.app.get('io').in(`user:${user._id}`).disconnectSockets(true);
+    res.clearCookie(cookieName, { ...config.cookie, maxAge: undefined });
+    res.json({ message: 'Password reset. Sign in with your new password.' });
   } catch (error) {
     next(error);
   }

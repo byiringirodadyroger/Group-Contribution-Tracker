@@ -15,7 +15,14 @@ const keys = [
   'APP_IP',
   'SERVER_IP',
   'CORS_ORIGINS',
-  'RENDER_EXTERNAL_URL'
+  'RENDER_EXTERNAL_URL',
+  'PUBLIC_APP_URL',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_SECURE',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMTP_FROM'
 ];
 
 function withEnvironment(values, callback) {
@@ -73,5 +80,29 @@ test('includes the Render external URL in allowed CORS origins', () => {
       'https://old.example.com',
       'https://group-contribution-tracker.onrender.com'
     ]);
+  });
+});
+
+test('configures SMTP and the public reset-link origin', () => {
+  withEnvironment({
+    JWT_SECRET: 's'.repeat(32),
+    SMTP_HOST: 'smtp.gmail.com',
+    SMTP_PORT: '465',
+    SMTP_SECURE: 'true',
+    SMTP_USER: 'admin@example.com',
+    SMTP_PASS: 'private-app-password',
+    SMTP_FROM: 'Group Tracker <admin@example.com>',
+    PUBLIC_APP_URL: 'https://tracker.example.com/'
+  }, () => {
+    const config = loadConfig();
+    assert.deepEqual(config.smtp, {
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
+      user: 'admin@example.com',
+      password: 'private-app-password',
+      from: 'Group Tracker <admin@example.com>'
+    });
+    assert.equal(config.publicAppUrl, 'https://tracker.example.com');
   });
 });

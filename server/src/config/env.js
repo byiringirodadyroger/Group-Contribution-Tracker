@@ -58,6 +58,14 @@ function loadConfig() {
     ...parseCsvList(process.env.CORS_ORIGINS),
     process.env.RENDER_EXTERNAL_URL
   ].filter(Boolean).map((origin) => origin.trim().replace(/\/+$/, ''))));
+  const smtpPort = Number.parseInt(process.env.SMTP_PORT || '465', 10);
+  if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+    throw new Error('SMTP_PORT must be an integer between 1 and 65535');
+  }
+  const publicAppUrl = (process.env.PUBLIC_APP_URL ||
+    process.env.RENDER_EXTERNAL_URL ||
+    corsOrigins[0] ||
+    'http://localhost:5173').replace(/\/+$/, '');
 
   return {
     nodeEnv: process.env.NODE_ENV || 'development',
@@ -65,6 +73,15 @@ function loadConfig() {
     mongoUri: process.env.MONGODB_URI,
     jwtSecret: requiredSecret('JWT_SECRET'),
     setupSecret,
+    publicAppUrl,
+    smtp: {
+      host: process.env.SMTP_HOST || '',
+      port: smtpPort,
+      secure: parseBoolean(process.env.SMTP_SECURE, smtpPort === 465),
+      user: process.env.SMTP_USER || '',
+      password: process.env.SMTP_PASS || '',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || ''
+    },
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || '12h',
     cookie: {
       httpOnly: true,

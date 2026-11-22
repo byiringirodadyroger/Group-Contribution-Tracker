@@ -15,6 +15,11 @@ self-contained; the frontend should use the deployed API origin as its base URL.
 - Set `CORS_ORIGINS` to the exact frontend origin(s), comma-separated, including
   scheme and any port. The Vite development default is
   `http://localhost:5173`. The API uses credentialed CORS; do not use `*`.
+- Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`,
+  and optionally `SMTP_FROM` to enable password reset emails. For Gmail, use
+  `smtp.gmail.com`, port `465`, secure `true`, and a Google App Password, not
+  your normal account password. `PUBLIC_APP_URL` optionally sets the origin
+  used in reset links; Render's service URL is used by default.
 - Optional: set `ALLOWED_IPS` to a comma- or newline-separated allowlist of
   trusted client IPs. When set, the API rejects requests from any other IP after
   honoring `X-Forwarded-For` and `TRUST_PROXY` when enabled.
@@ -67,6 +72,29 @@ target. Registration creates a `registered` account; the member
 then signs in and calls `POST /api/auth/request-access`, changing the account
 status to `pending`. Roger can approve only pending access requests.
 
+## Email password reset
+
+The sign-in page's **Forgot password?** link sends a one-time link to the email
+address used as the account's username. Reset links expire after one hour and
+are invalidated after use or when a newer link is requested. The API stores only
+a hash of each reset token and invalidates the account's existing sessions
+after a successful reset.
+
+Configure Gmail SMTP in the Render API service's Environment settings:
+
+- `SMTP_HOST`: `smtp.gmail.com`
+- `SMTP_PORT`: `465`
+- `SMTP_SECURE`: `true`
+- `SMTP_USER`: the Gmail sending account
+- `SMTP_PASS`: a Google App Password for that account, not its normal password
+- `SMTP_FROM`: the sending address, optionally with a display name
+- `PUBLIC_APP_URL`: the public frontend origin; defaults to Render's service URL
+
+Create the App Password after enabling 2-Step Verification in the Google
+account's security settings. Never commit or share the App Password. Reset
+requests return the same message whether the email matches an account or not.
+Only accounts whose username is an email address can use this flow.
+
 ## Authentication and account approval
 
 Passwords are hashed with bcrypt. Successful login sets an HTTP-only,
@@ -87,6 +115,8 @@ member ownership are unique.
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | `{name, username, password, memberId}` or `memberName`; creates `registered` account |
 | POST | `/api/auth/login` | Public | `{username, password}` where username may be an email address; sets auth cookie |
+| POST | `/api/auth/forgot-password` | Public | `{email}` sends a time-limited reset link when an account exists |
+| POST | `/api/auth/reset-password` | Public | `{token, newPassword}` consumes a one-time reset link |
 | POST | `/api/auth/logout` | Public | Clears auth cookie |
 | GET | `/api/auth/me` | Signed in | Current account, including restricted status |
 | POST | `/api/auth/request-access` | Signed in | Changes `registered` account to `pending` |
@@ -158,3 +188,9 @@ cookie settings as described above when the frontend and API use different
 sites. Keep both secrets out of source control and rotate the setup secret after
 the one-time seed. The source provides the API only; it does not provision
 MongoDB, host the service, or deploy the frontend.
+
+For Gmail password-reset delivery, enable 2-Step Verification and create an
+App Password in the sending Google account. In Render, set `SMTP_HOST` to
+`smtp.gmail.com`, `SMTP_PORT` to `465`, `SMTP_SECURE` to `true`, `SMTP_USER` to
+the sender address, `SMTP_PASS` to the App Password, and `SMTP_FROM` to the
+sender address (or a display-name form). Never commit or share the App Password.

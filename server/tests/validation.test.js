@@ -129,6 +129,13 @@ test('accounts support registered, pending, active, and inactive states with reg
   await assert.doesNotReject(user.validate());
 });
 
+test('password reset tokens store a hash and expire automatically', () => {
+  const PasswordResetToken = require('../src/models/PasswordResetToken');
+  const indexes = PasswordResetToken.schema.indexes();
+  assert.ok(indexes.some(([keys, options]) => keys.tokenHash === 1 && options.unique));
+  assert.ok(indexes.some(([keys, options]) => keys.expiresAt === 1 && options.expireAfterSeconds === 0));
+});
+
 test('admin deactivation clears approval metadata for previously approved accounts', async () => {
   process.env.JWT_SECRET = 'a'.repeat(32);
   process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/group-tracker-test';

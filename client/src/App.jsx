@@ -3,6 +3,8 @@ import { useAuth } from "./context/AuthContext";
 import AppShell from "./components/AppShell";
 import { FullPageLoader } from "./components/UI";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import MembersPage from "./pages/MembersPage";
@@ -34,6 +36,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={home} replace /> : <LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/register" element={user ? <Navigate to={home} replace /> : <RegisterPage />} />
       <Route path="/access" element={<AccessRequestPage />} />
       <Route path="/" element={<PrivatePage><DashboardPage /></PrivatePage>} />

@@ -102,9 +102,10 @@ npm.cmd audit
 
 ## Deploy to Render
 
-`render.yaml` deploys both services from this repository: the API (`server/`,
-a Node web service) and the dashboard (`client/`, a static site). MongoDB is
-not hosted by Render, so use MongoDB Atlas.
+`render.yaml` deploys both services from this repository: the API (a Node web
+service) and the dashboard (`client/`, a static site). The API builds from the
+repository root so its deployment includes the frontend bundle it serves.
+MongoDB is not hosted by Render, so use MongoDB Atlas.
 
 1. **Database.** Create an Atlas cluster and a database user with a strong
    password. Under *Network Access*, allow connections from Render. `0.0.0.0/0`

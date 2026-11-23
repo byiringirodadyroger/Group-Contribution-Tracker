@@ -47,7 +47,7 @@ function withEnvironment(values, callback) {
 test('configures the six required member profiles by default', () => {
   withEnvironment({ JWT_SECRET: 's'.repeat(32) }, () => {
     assert.deepEqual(loadConfig().memberNames, [
-      'Roger', 'Jean Bosco', 'Ildebrand', 'Vivant', 'Shema', 'Renne Shaffy'
+      'Roger', 'Jean Bosco', 'Ildebrand', 'Vivant', 'Shema', 'Renne'
     ]);
   });
 });

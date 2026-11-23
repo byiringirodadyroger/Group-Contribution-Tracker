@@ -13,6 +13,11 @@ async function start() {
 
 start().catch((error) => {
   console.error('Unable to start API:', error.message);
+  if (error.reason?.servers) {
+    for (const [host, desc] of error.reason.servers) {
+      console.error(`  -> ${host}:`, desc.error?.message || desc.error);
+    }
+  }
   process.exitCode = 1;
 });
 

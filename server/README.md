@@ -28,7 +28,7 @@ self-contained; the frontend should use the deployed API origin as its base URL.
   defaults to `lax` and non-secure cookies. Set `COOKIE_DOMAIN` only when needed.
 - `REGULAR_MEMBER_NAMES` optionally sets the five regular members. It must
   contain exactly five distinct names other than Roger. The defaults are
-  `Jean Bosco`, `Ildebrand`, `Vivant`, `Shema`, and `Renne Shaffy`; Roger is
+  `Jean Bosco`, `Ildebrand`, `Vivant`, `Shema`, and `Renne`; Roger is
   the sixth member and administrator. Each seeded member has a fixed target of
   20,000 RWF.
 - If TLS terminates at a trusted reverse proxy and rate limits should use the
@@ -39,10 +39,15 @@ Install and run:
 
 ```sh
 npm install
+npm run build:client
 npm test
 npm run lint
 npm start
 ```
+
+Build the client before starting the API locally if you want the API to serve
+the frontend. Render runs this build during deployment; startup only launches
+the API, avoiding a frontend reinstall and rebuild whenever the service wakes.
 
 For local development, start MongoDB and use `npm run dev`. The server binds to
 `PORT` (default `4000`). The health endpoint is `GET /api/health`.

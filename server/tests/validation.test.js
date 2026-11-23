@@ -52,13 +52,13 @@ test('accepts only positive safe integer RWF amounts', () => {
 
 test('seeds six fixed members with 20,000 RWF targets and only Roger marked admin', () => {
   const members = getFixedMembers([
-    'Roger', 'Jean Bosco', 'Ildebrand', 'Vivant', 'Shema', 'Renne Shaffy'
+    'Roger', 'Jean Bosco', 'Ildebrand', 'Vivant', 'Shema', 'Renne'
   ]);
   assert.equal(members.length, 6);
   assert.ok(members.every((member) => member.targetAmount === 20000));
   assert.deepEqual(members.filter((member) => member.isAdminMember).map((member) => member.name), ['Roger']);
   assert.deepEqual(members.map((member) => member.name), [
-    'Roger', 'Jean Bosco', 'Ildebrand', 'Vivant', 'Shema', 'Renne Shaffy'
+    'Roger', 'Jean Bosco', 'Ildebrand', 'Vivant', 'Shema', 'Renne'
   ]);
 });
 

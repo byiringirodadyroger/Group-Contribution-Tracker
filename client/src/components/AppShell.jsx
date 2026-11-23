@@ -13,6 +13,8 @@ export default function AppShell({ children }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState(() => window.localStorage.getItem("group-fund-theme") === "dark" ? "dark" : "light");
+  const [logoutError, setLogoutError] = useState("");
+  const [loggingOut, setLoggingOut] = useState(false);
   const navigate = useNavigate();
   const links = [...baseLinks, ...(user?.role === "admin" ? [{ to: "/admin", label: "Administration", icon: ShieldCheck }] : [])];
 
@@ -27,11 +29,16 @@ export default function AppShell({ children }) {
 
   async function handleLogout() {
     if (!window.confirm("Are you sure you want to sign out?")) return;
+    if (loggingOut) return;
+    setLogoutError("");
+    setLoggingOut(true);
     try {
       await logout();
-      navigate("/login");
+      navigate("/login", { replace: true });
     } catch {
-      navigate("/login");
+      setLogoutError("Could not sign out. Check your connection and try again.");
+    } finally {
+      setLoggingOut(false);
     }
   }
 
@@ -39,7 +46,7 @@ export default function AppShell({ children }) {
     {open && <button aria-label="Close navigation" onClick={() => setOpen(false)} className="fixed inset-0 z-30 bg-slate-950/30 lg:hidden" />}
     <aside className={`fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
       <div className="flex h-[76px] items-center justify-between border-b border-slate-100 px-6">
-        <Link to="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
+        <Link to="/" aria-label="Group Fund overview" title="Go to overview" className="flex items-center gap-3" onClick={() => setOpen(false)}>
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-forest-600 text-white"><Activity size={21} /></span>
           <span><span className="block text-sm font-bold leading-tight">Group Fund</span><span className="text-xs text-slate-500">Contribution tracker</span></span>
         </Link>
@@ -64,8 +71,11 @@ export default function AppShell({ children }) {
         <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-forest-100 text-forest-700"><CircleUserRound size={20} /></span>
           <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{user?.name}</span><span className="text-xs capitalize text-slate-500">{user?.role || "member"}</span></span>
-          <button onClick={handleLogout} aria-label="Sign out" className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-800"><LogOut size={17} /></button>
         </div>
+        <button type="button" onClick={handleLogout} disabled={loggingOut} className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 disabled:cursor-wait disabled:opacity-60">
+          <LogOut size={16} />{loggingOut ? "Signing out..." : "Sign out"}
+        </button>
+        {logoutError && <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">{logoutError}</p>}
       </div>
     </aside>
     <div className="lg:pl-[260px]">

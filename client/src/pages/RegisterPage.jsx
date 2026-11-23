@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Activity, CheckCircle2 } from "lucide-react";
 import api, { getErrorMessage } from "../api";
@@ -9,14 +9,29 @@ export default function RegisterPage() {
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({ name: "", username: "", password: "", memberId: "" });
   const [error, setError] = useState("");
+  const [profilesError, setProfilesError] = useState("");
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    api.get("/api/auth/registration-options")
-      .then(({ data }) => setMembers(data.members || data))
-      .catch(() => setError("Unable to load available member profiles. Please try again later."));
+  const loadProfiles = useCallback(async () => {
+    setLoadingProfiles(true);
+    setProfilesError("");
+    try {
+      const { data } = await api.get("/api/auth/registration-options");
+      const availableProfiles = data.members || data;
+      if (!Array.isArray(availableProfiles)) {
+        throw new Error("The server returned an invalid member profile list.");
+      }
+      setMembers(availableProfiles);
+    } catch (requestError) {
+      setProfilesError(getErrorMessage(requestError, "Unable to load available member profiles. Please try again."));
+    } finally {
+      setLoadingProfiles(false);
+    }
   }, []);
+
+  useEffect(() => { loadProfiles(); }, [loadProfiles]);
 
   async function submit(event) {
     event.preventDefault();
@@ -41,12 +56,17 @@ export default function RegisterPage() {
     <section className="flex items-center justify-center px-5 py-10"><div className="w-full max-w-[440px]">
       <p className="text-sm font-semibold text-forest-600">Member account</p><h2 className="mt-2 text-3xl font-bold tracking-tight">Create your account</h2><p className="mt-2 text-sm text-slate-500">After signing in, send an access request to Roger. Your details are shared only with the group administrator.</p>
       <Alert>{error}</Alert>
+      <Alert>{profilesError}</Alert>
+      {profilesError && <button type="button" className="button-secondary -mt-2 mb-5 w-full" onClick={loadProfiles} disabled={loadingProfiles}>
+        {loadingProfiles ? <><Spinner /> Loading profiles...</> : "Retry loading profiles"}
+      </button>}
+      {!loadingProfiles && !profilesError && members.length === 0 && <p role="status" className="mt-5 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">No member profiles are currently available. Please contact the group administrator.</p>}
       <form className="mt-7 space-y-4" onSubmit={submit}>
         <label className="block text-sm font-semibold text-slate-700">Your name<input className="field mt-2" autoComplete="name" required maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-        <label className="block text-sm font-semibold text-slate-700">Group member profile<select className="field mt-2" required value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })}><option value="">Select your name</option>{members.map((m) => <option key={m._id || m.id} value={m._id || m.id}>{m.name}</option>)}</select></label>
+        <label className="block text-sm font-semibold text-slate-700">Group member profile<select className="field mt-2" required disabled={loadingProfiles || Boolean(profilesError) || members.length === 0} value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })}><option value="">{loadingProfiles ? "Loading member profiles..." : members.length ? "Select your name" : "No profiles available"}</option>{members.map((m) => <option key={m._id || m.id} value={m._id || m.id}>{m.name}</option>)}</select></label>
         <label className="block text-sm font-semibold text-slate-700">Username<input className="field mt-2" autoComplete="username" required minLength={3} maxLength={32} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></label>
         <label className="block text-sm font-semibold text-slate-700">Password<PasswordInput className="field mt-2 pr-12" autoComplete="new-password" required minLength={10} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /><span className="mt-1 block text-xs font-normal text-slate-400">Use at least 10 characters.</span></label>
-        <button className="button-primary mt-2 w-full" disabled={busy}>{busy ? <Spinner /> : "Submit approval request"}</button>
+        <button className="button-primary mt-2 w-full" disabled={busy || loadingProfiles || Boolean(profilesError) || members.length === 0}>{busy ? <Spinner /> : "Submit approval request"}</button>
       </form>
       <p className="mt-6 text-center text-sm text-slate-500">Already have access? <Link to="/login" className="font-semibold text-forest-700 hover:underline">Sign in</Link></p>
     </div></section>

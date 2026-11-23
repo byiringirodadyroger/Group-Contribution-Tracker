@@ -36,7 +36,7 @@ function loadConfig() {
   }
 
   const regularNames = (process.env.REGULAR_MEMBER_NAMES ||
-    'Jean Bosco,Ildebrand,Vivant,Shema,Renne Shaffy')
+    'Jean Bosco,Ildebrand,Vivant,Shema,Renne')
     .split(',')
     .map((name) => name.trim())
     .filter(Boolean);

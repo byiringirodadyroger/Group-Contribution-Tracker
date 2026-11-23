@@ -137,8 +137,10 @@ Notes:
 - `ALLOWED_IPS` is deliberately not set in the Blueprint: member IPs can change,
   so an allowlist can lock them out. Configure it only if you need it.
 - The Blueprint uses Render's free plan. A free API sleeps after inactivity, so
-  its first request afterwards may be slow. Change `plan: free` to
-  `plan: starter` in `render.yaml` to keep it awake.
+  its first request afterwards may show Render's application-loading screen
+  while the service wakes. The frontend is built during deployment, not each
+  time the API starts. Change `plan: free` to `plan: starter` in `render.yaml`
+  to keep it awake.
 - The two `onrender.com` services are on separate sites, so the Blueprint sets
   `COOKIE_SAME_SITE=none`. Browsers that block third-party cookies (notably
   Safari on iPhone) may not keep users signed in. For reliable cookies, use
@@ -147,3 +149,4 @@ Notes:
   `CORS_ORIGINS` and `VITE_API_URL`, then redeploy.
 - Keep payment writes restricted to the approved administrator; the API
   enforces this independently of the frontend.
+  

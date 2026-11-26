@@ -46,7 +46,7 @@ export default function AppShell({ children }) {
 
   return <div className="min-h-screen bg-slate-50 text-slate-900">
     {open && <button aria-label="Close navigation" onClick={() => setOpen(false)} className="fixed inset-0 z-30 bg-slate-950/30 lg:hidden" />}
-    <aside className={`fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
+    <aside className={`fixed inset-y-0 left-0 z-40 flex w-[min(260px,calc(100vw-2rem))] flex-col overflow-y-auto overscroll-contain border-r border-slate-200 bg-white transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
       <div className="flex h-[76px] items-center justify-between border-b border-slate-100 px-6">
         <Link to="/" aria-label="Group Fund overview" title="Go to overview" className="flex items-center gap-3" onClick={() => setOpen(false)}>
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-forest-600 text-white"><Activity size={21} /></span>
@@ -54,7 +54,7 @@ export default function AppShell({ children }) {
         </Link>
         <button className="lg:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X size={20} /></button>
       </div>
-      <nav className="flex-1 space-y-1 px-3 py-6" aria-label="Main navigation">
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-6" aria-label="Main navigation">
         <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Workspace</p>
         {links.map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} onClick={() => setOpen(false)}
           className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${isActive ? "bg-forest-50 text-forest-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}>

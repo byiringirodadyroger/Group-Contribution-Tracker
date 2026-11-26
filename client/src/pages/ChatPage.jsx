@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import { ArrowDownToLine, ArrowLeft, Check, CheckCheck, FileText, MoreVertical, Paperclip, Pencil, Search, Send, Users, X } from "lucide-react";
 import api, { getErrorMessage } from "../api";
@@ -30,10 +30,13 @@ export default function ChatPage() {
   const [mobileConversation, setMobileConversation] = useState(false);
   const [attachment, setAttachment] = useState(null);
   const [openMessageMenu, setOpenMessageMenu] = useState(null);
+  const [messageMenuPosition, setMessageMenuPosition] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const messageMenuRef = useRef(null);
+  const messageComposerRef = useRef(null);
 
   useEffect(() => {
     api.get("/api/chat/contacts")
@@ -138,11 +141,27 @@ export default function ChatPage() {
   useEffect(() => {
     if (!openMessageMenu) return undefined;
     function closeMessageMenu(event) {
-      if (!event.target.closest("[data-message-menu]")) setOpenMessageMenu(null);
+      if (!event.target.closest("[data-message-menu]")) {
+        setOpenMessageMenu(null);
+        setMessageMenuPosition(null);
+      }
     }
     document.addEventListener("pointerdown", closeMessageMenu);
     return () => document.removeEventListener("pointerdown", closeMessageMenu);
   }, [openMessageMenu]);
+
+  useLayoutEffect(() => {
+    if (!openMessageMenu || !messageMenuRef.current || !messageMenuPosition) return;
+    const menu = messageMenuRef.current.getBoundingClientRect();
+    const left = Math.max(8, Math.min(messageMenuPosition.left, window.innerWidth - menu.width - 8));
+    const composerTop = messageComposerRef.current?.getBoundingClientRect().top ?? window.innerHeight;
+    const maxHeight = Math.max(1, Math.min(window.innerHeight - 16, composerTop - 16));
+    const menuHeight = Math.min(menu.height, maxHeight);
+    const top = Math.max(8, Math.min(messageMenuPosition.top, window.innerHeight - menuHeight - 8, composerTop - menuHeight - 8));
+    if (left !== messageMenuPosition.left || top !== messageMenuPosition.top || maxHeight !== messageMenuPosition.maxHeight) {
+      setMessageMenuPosition({ left, top, maxHeight });
+    }
+  }, [openMessageMenu, messageMenuPosition]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: "nearest" });
@@ -196,6 +215,7 @@ export default function ChatPage() {
         setMessages((current) => current.filter((message) => message.id !== messageId));
       }
       setOpenMessageMenu(null);
+      setMessageMenuPosition(null);
       setEditingMessage(null);
     } catch (requestError) {
       setError(getErrorMessage(requestError, "Unable to delete your message."));
@@ -205,6 +225,7 @@ export default function ChatPage() {
   function startEditing(message) {
     setEditingMessage({ id: message.id, text: message.text || "" });
     setOpenMessageMenu(null);
+    setMessageMenuPosition(null);
   }
 
   async function saveEdit(event) {
@@ -228,8 +249,22 @@ export default function ChatPage() {
       currentTime - new Date(message.createdAt).getTime() < deleteForEveryoneWindowMs;
     const canDeleteForEveryone = withinEditWindow;
     return <div className="relative mb-1 shrink-0" data-message-menu>
-      <button type="button" onClick={() => setOpenMessageMenu((current) => current === message.id ? null : message.id)} className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-800" aria-label="Message options" aria-expanded={openMessageMenu === message.id} title="Message options"><MoreVertical size={17} /></button>
-      {openMessageMenu === message.id && <div className={`absolute top-0 z-30 min-w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ${own ? "right-9" : "left-9"}`}>
+      <button type="button" onClick={(event) => {
+        if (openMessageMenu === message.id) {
+          setOpenMessageMenu(null);
+          setMessageMenuPosition(null);
+          return;
+        }
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const menuWidth = Math.min(192, window.innerWidth - 16);
+        const preferredLeft = own ? bounds.right - menuWidth : bounds.left;
+        setMessageMenuPosition({
+          left: Math.max(8, Math.min(preferredLeft, window.innerWidth - menuWidth - 8)),
+          top: bounds.top
+        });
+        setOpenMessageMenu(message.id);
+      }} className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-800" aria-label="Message options" aria-expanded={openMessageMenu === message.id} title="Message options"><MoreVertical size={17} /></button>
+      {openMessageMenu === message.id && <div ref={messageMenuRef} style={messageMenuPosition} className="fixed z-50 min-w-48 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
         {withinEditWindow && <button type="button" onClick={() => startEditing(message)} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"><span className="flex items-center gap-2"><Pencil size={15} /> Edit message</span></button>}
         <button type="button" onClick={() => deleteMessage(message.id, "me")} className="block w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-700 hover:bg-slate-50">Delete for me</button>
         {canDeleteForEveryone
@@ -281,7 +316,7 @@ export default function ChatPage() {
   return <>
     <PageHeader eyebrow="Communication" title="Messages" description="Chat with the group or send an approved member a direct message." />
     {error && <Alert onClose={() => setError("")}>{error}</Alert>}
-    <div className="h-[calc(100vh-220px)] min-h-[480px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card md:grid md:grid-cols-[320px_1fr]">
+    <div className="h-[calc(100dvh-220px)] min-h-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card md:grid md:grid-cols-[320px_1fr]">
       <aside className={`flex min-h-0 flex-col border-slate-200 bg-white ${mobileConversation ? "hidden md:flex" : "flex"} md:border-r`}>
         <div className="border-b border-slate-100 px-4 pb-3 pt-4">
           <div className="mb-3 flex items-center justify-between">
@@ -363,7 +398,7 @@ export default function ChatPage() {
           }) : <EmptyState title="No messages yet" message="Start the conversation." />}
           <div ref={messagesEndRef} />
         </div>
-        <form onSubmit={sendMessage} className="relative flex flex-col gap-2 border-t border-slate-200 bg-slate-100 p-3">
+        <form ref={messageComposerRef} onSubmit={sendMessage} className="relative flex flex-col gap-2 border-t border-slate-200 bg-slate-100 p-3">
           {attachment && <div className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
             <FileText size={16} className="shrink-0 text-forest-700" />
             <span className="min-w-0 flex-1 truncate">{attachment.name} <span className="text-xs text-slate-500">({formatFileSize(attachment.size)})</span></span>

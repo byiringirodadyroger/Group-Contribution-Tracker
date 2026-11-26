@@ -38,8 +38,17 @@ export default function MemberDetailsPage() {
       <ProgressBar value={progress} className="mt-5" /><p className="mt-2 text-sm text-slate-500">{money(Math.max(0, target - paid))} RWF remaining</p>
     </Card>
     <div className="mb-4 mt-8 flex items-center gap-2"><CircleDollarSign size={19} className="text-forest-600" /><h2 className="text-lg font-bold">Recent payments</h2></div>
-    {payments?.length ? <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card">
-      <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Date</th><th className="px-5 py-3">Method</th><th className="px-5 py-3">Reference</th><th className="px-5 py-3 text-right">Amount</th></tr></thead><tbody className="divide-y divide-slate-100">{payments.map((payment) => <tr key={payment._id || payment.id}><td className="px-5 py-4">{new Date(payment.paymentDate || payment.paidAt).toLocaleDateString()}</td><td className="px-5 py-4">{paymentMethodLabel(payment.paymentMethod || payment.method)}</td><td className="px-5 py-4 text-slate-500">{payment.transactionReference || "—"}</td><td className="px-5 py-4 text-right font-semibold">{money(payment.amount)} RWF</td></tr>)}</tbody></table></div>
-    </div> : <EmptyState title="No payments yet" message="Payments for this member will show up here." />}
+    {payments?.length ? <>
+      <div className="space-y-3 md:hidden">{payments.map((payment) => <article key={payment._id || payment.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+        <div className="flex items-start justify-between gap-3"><p className="text-sm font-semibold text-slate-800">{new Date(payment.paymentDate || payment.paidAt).toLocaleDateString()}</p><p className="shrink-0 text-right font-bold">{money(payment.amount)} RWF</p></div>
+        <dl className="mt-3 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-xs">
+          <div className="min-w-0"><dt className="text-slate-400">Method</dt><dd className="mt-0.5 break-words text-slate-700">{paymentMethodLabel(payment.paymentMethod || payment.method)}</dd></div>
+          <div className="min-w-0"><dt className="text-slate-400">Reference</dt><dd className="mt-0.5 break-all text-slate-700">{payment.transactionReference || "—"}</dd></div>
+        </dl>
+      </article>)}</div>
+      <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card md:block">
+        <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Date</th><th className="px-5 py-3">Method</th><th className="px-5 py-3">Reference</th><th className="px-5 py-3 text-right">Amount</th></tr></thead><tbody className="divide-y divide-slate-100">{payments.map((payment) => <tr key={payment._id || payment.id}><td className="px-5 py-4">{new Date(payment.paymentDate || payment.paidAt).toLocaleDateString()}</td><td className="px-5 py-4">{paymentMethodLabel(payment.paymentMethod || payment.method)}</td><td className="px-5 py-4 text-slate-500">{payment.transactionReference || "—"}</td><td className="px-5 py-4 text-right font-semibold">{money(payment.amount)} RWF</td></tr>)}</tbody></table></div>
+      </div>
+    </> : <EmptyState title="No payments yet" message="Payments for this member will show up here." />}
   </>;
 }

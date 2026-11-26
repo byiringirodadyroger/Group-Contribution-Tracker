@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Activity, CircleUserRound, CreditCard, LayoutDashboard, LogOut, Menu, Moon, Settings, ShieldCheck, Sun, Users, X } from "lucide-react";
+import { Activity, CircleUserRound, CreditCard, LayoutDashboard, LogOut, Menu, MessageCircle, Moon, Settings, ShieldCheck, Sun, Users, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import NotificationsBell from "./NotificationsBell";
 
 const baseLinks = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/members", label: "Members", icon: Users },
-  { to: "/payments", label: "Payment history", icon: CreditCard }
+  { to: "/payments", label: "Payment history", icon: CreditCard },
+  { to: "/chat", label: "Group chat", icon: MessageCircle }
 ];
 
 export default function AppShell({ children }) {
@@ -82,7 +84,7 @@ export default function AppShell({ children }) {
       <header className="sticky top-0 z-20 flex h-[68px] items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur sm:px-8">
         <button onClick={() => setOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu"><Menu size={21} /></button>
         <div className="hidden text-sm text-slate-500 sm:block">Shared group contributions <span className="mx-1.5 text-slate-300">/</span><span className="text-slate-800">RWF</span></div>
-        <div className="ml-auto flex items-center gap-3 text-sm"><span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-forest-500" /><span className="text-slate-600">Group workspace</span></span><button type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} aria-pressed={theme === "dark"} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div>
+        <div className="ml-auto flex items-center gap-3 text-sm"><span className="hidden items-center gap-2 sm:flex"><span className="h-2 w-2 rounded-full bg-forest-500" /><span className="text-slate-600">Group workspace</span></span><NotificationsBell /><button type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} aria-pressed={theme === "dark"} title={`Switch to ${theme === "dark" ? "light" : "dark"} theme`} className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">{theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}</button></div>
       </header>
       <main className="mx-auto max-w-[1440px] px-4 py-7 sm:px-8 sm:py-9">{children}</main>
     </div>

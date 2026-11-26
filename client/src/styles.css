@@ -51,10 +51,46 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 [data-theme="dark"] select,
 [data-theme="dark"] textarea { color-scheme: dark; }
 [data-theme="dark"] .field::placeholder { color: #94a3b8; }
+.chat-wallpaper {
+  background-color: #efeae2;
+  background-image:
+    radial-gradient(circle at 20px 20px, rgba(120, 113, 108, .055) 2px, transparent 2px),
+    radial-gradient(circle at 60px 60px, rgba(120, 113, 108, .04) 2px, transparent 2px);
+  background-size: 80px 80px;
+}
+.chat-own-message,
+.chat-own-message .chat-message-text { color: #1e293b !important; }
+.chat-wallpaper .chat-edit-input {
+  color: #1e293b !important;
+  background-color: #fff !important;
+  color-scheme: light;
+}
+[data-theme="dark"] .chat-wallpaper .chat-edit-input {
+  color: #f1f5f9 !important;
+  background-color: #334155 !important;
+  border-color: #64748b;
+  color-scheme: dark;
+}
 
 @layer components {
   .field { @apply block w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-800 placeholder:text-slate-400 transition focus:border-forest-500 focus:outline-none focus:ring-2 focus:ring-forest-100 disabled:cursor-not-allowed disabled:bg-slate-50; }
   .field-label { @apply block text-sm font-semibold text-slate-700; }
   .button-primary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-forest-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-700 disabled:cursor-not-allowed disabled:opacity-60; }
   .button-secondary { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50; }
+}
+
+[data-theme="dark"] .field {
+  color: #f1f5f9;
+  background-color: #334155;
+  border-color: #64748b;
+  color-scheme: dark;
+}
+[data-theme="dark"] .field::placeholder { color: #cbd5e1; opacity: 1; }
+[data-theme="dark"] .field:disabled {
+  color: #94a3b8;
+  background-color: #1e293b;
+}
+[data-theme="dark"] .field-label,
+[data-theme="dark"] label.text-slate-700 {
+  color: #e2e8f0;
 }

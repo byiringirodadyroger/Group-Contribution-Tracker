@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api, { getErrorMessage } from "../api";
 import { Alert, Card, PageHeader, Spinner } from "../components/UI";
@@ -10,9 +10,30 @@ export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [emailForm, setEmailForm] = useState({ email: user?.email || "", currentPassword: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [emailBusy, setEmailBusy] = useState(false);
+
+  async function submitEmail(event) {
+    event.preventDefault();
+    setEmailError("");
+    setEmailMessage("");
+    setEmailBusy(true);
+    try {
+      const { data } = await api.put("/api/auth/email", emailForm);
+      setEmailForm({ email: data.user.email || "", currentPassword: "" });
+      await refreshUser();
+      setEmailMessage(data.user.email ? "Sign-in email updated." : "Sign-in email removed.");
+    } catch (e) {
+      setEmailError(getErrorMessage(e, "Unable to update your email."));
+    } finally {
+      setEmailBusy(false);
+    }
+  }
 
   async function submit(event) {
     event.preventDefault();
@@ -37,6 +58,13 @@ export default function SettingsPage() {
     <PageHeader eyebrow="Your account" title="Account settings" description="Manage your sign-in details and account security." />
     <div className="grid max-w-4xl gap-5 lg:grid-cols-[.8fr_1.2fr]">
       <Card><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-forest-50 text-forest-700"><KeyRound size={20} /></span><div><h2 className="font-bold">Profile</h2><p className="text-xs text-slate-500">Your group account</p></div></div><dl className="mt-6 space-y-4 text-sm"><div><dt className="text-slate-500">Name</dt><dd className="mt-1 font-semibold">{user?.name}</dd></div><div><dt className="text-slate-500">Username</dt><dd className="mt-1 font-semibold">{user?.username}</dd></div><div><dt className="text-slate-500">Role</dt><dd className="mt-1 font-semibold capitalize">{user?.role || "member"}</dd></div></dl></Card>
+      <Card><div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-forest-50 text-forest-700"><Mail size={20} /></span><div><h2 className="font-bold">Sign-in email</h2><p className="text-xs text-slate-500">Add an email address you can use to sign in</p></div></div><div className="mt-5"><Alert>{emailError}</Alert><Alert kind="success">{emailMessage}</Alert></div>
+        <form className="space-y-4" onSubmit={submitEmail}>
+          <label className="field-label">Email address<input className="field mt-2" type="email" autoComplete="email" maxLength={254} value={emailForm.email} onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })} /></label>
+          <label className="field-label">Current password<PasswordInput className="field mt-2 pr-12" autoComplete="current-password" required value={emailForm.currentPassword} onChange={(e) => setEmailForm({ ...emailForm, currentPassword: e.target.value })} /></label>
+          <button className="button-primary" disabled={emailBusy}>{emailBusy ? <Spinner /> : "Save email"}</button>
+        </form>
+      </Card>
       <Card><h2 className="font-bold">Change password</h2><p className="mt-1 text-sm text-slate-500">Use a unique password with at least 10 characters.</p><div className="mt-5"><Alert>{error}</Alert><Alert kind="success">{message}</Alert></div>
         <form className="space-y-4" onSubmit={submit}>
           <label className="field-label">Current password<PasswordInput className="field mt-2 pr-12" autoComplete="current-password" required value={form.currentPassword} onChange={(e) => setForm({ ...form, currentPassword: e.target.value })} /></label>

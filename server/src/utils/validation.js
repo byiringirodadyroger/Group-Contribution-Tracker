@@ -4,16 +4,23 @@ const normalizeName = (value) => (typeof value === 'string'
 const normalizeUsername = (value) => (typeof value === 'string'
   ? value.trim().toLowerCase()
   : '');
+const normalizeEmail = (value) => (typeof value === 'string'
+  ? value.trim().toLowerCase()
+  : '');
 
 function validateUsername(value) {
   return typeof value === 'string' && value.trim().length >= 3 && value.trim().length <= 32 &&
     /^[a-zA-Z0-9._-]+$/.test(value.trim());
 }
 
-function validateLoginIdentifier(value) {
-  if (validateUsername(value)) return true;
+function validateEmail(value) {
   return typeof value === 'string' && value.trim().length <= 254 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function validateLoginIdentifier(value) {
+  if (validateUsername(value)) return true;
+  return validateEmail(value);
 }
 
 function validatePassword(value) {
@@ -37,7 +44,9 @@ function isDuplicateKeyError(error) {
 module.exports = {
   normalizeName,
   normalizeUsername,
+  normalizeEmail,
   validateUsername,
+  validateEmail,
   validateLoginIdentifier,
   validatePassword,
   validateMemberName,

@@ -11,11 +11,13 @@ const SetupState = require('../models/SetupState');
 const { authenticate, getToken } = require('../middleware/auth');
 const { bootstrap } = require('../services/bootstrap');
 const { sendPasswordResetEmail } = require('../services/email');
+const { createNotification } = require('../services/notifications');
 const { loadConfig } = require('../config/env');
 const {
   normalizeName,
   normalizeUsername,
-  validateUsername,
+  normalizeEmail,
+  validateEmail,
   validateLoginIdentifier,
   validatePassword,
   isDuplicateKeyError
@@ -41,6 +43,7 @@ function publicUser(user) {
   return {
     id: user._id,
     username: user.username,
+    email: user.email || '',
     name: user.name,
     role: user.role,
     status: user.status,
@@ -63,11 +66,12 @@ function setAuthCookie(res, user) {
 
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, username, password, memberId, memberName } = req.body || {};
+    const { name, username, email, password, memberId, memberName } = req.body || {};
     if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100 ||
-        !validateUsername(username) || !validatePassword(password)) {
+        !validateLoginIdentifier(username) || !validatePassword(password) ||
+        (email !== undefined && email !== '' && !validateEmail(email))) {
       return res.status(400).json({
-        error: 'Provide a name (2-100 characters), valid username, and password (10-128 characters)'
+        error: 'Provide a name (2-100 characters), a valid username or email, optional valid email, and password (10-128 characters)'
       });
     }
     if (!memberId && (typeof memberName !== 'string' || !memberName.trim())) {
@@ -100,15 +104,35 @@ router.post('/register', async (req, res, next) => {
     if (normalizeName(name) !== member.normalizedName) {
       return res.status(400).json({ error: 'Your name must match the selected group member' });
     }
+    const normalizedUsername = normalizeUsername(username);
+    const normalizedEmail = email ? normalizeEmail(email) : '';
+    const existingIdentifier = await User.findOne({
+      $or: [
+        { username: normalizedUsername },
+        { email: normalizedUsername },
+        ...(normalizedEmail ? [{ username: normalizedEmail }, { email: normalizedEmail }] : [])
+      ]
+    });
+    if (existingIdentifier) {
+      return res.status(409).json({ error: 'Username or email is already in use' });
+    }
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await User.create({
-      username: normalizeUsername(username),
+      username: normalizedUsername,
+      ...(normalizedEmail ? { email: normalizedEmail } : {}),
       name: member.name,
       normalizedName: member.normalizedName,
       passwordHash,
       role: 'member',
       status: 'registered',
       memberId: member._id
+    });
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'account.registered',
+      title: 'New member account',
+      message: `${user.name} created a member account.`,
+      actorId: user._id
     });
     return res.status(201).json({
       message: 'Account created. Sign in and request access before administrator approval.',
@@ -143,7 +167,10 @@ router.post('/login', async (req, res, next) => {
         !validateLoginIdentifier(username) || !password) {
       return res.status(400).json({ error: 'A valid username or email address and password are required' });
     }
-    const user = await User.findOne({ username: normalizeUsername(username) })
+    const identifier = normalizeUsername(username);
+    const user = await User.findOne({
+      $or: [{ username: identifier }, { email: identifier }]
+    })
       .select('+passwordHash')
       .populate('memberId');
     const passwordMatches = user ? await bcrypt.compare(password, user.passwordHash) : false;
@@ -174,7 +201,13 @@ router.post('/forgot-password', passwordResetRequestLimiter, async (req, res, ne
       return res.status(503).json({ error: 'Password reset email is not configured' });
     }
 
-    const user = await User.findOne({ username: normalizeUsername(email) });
+    const normalizedEmail = normalizeEmail(email);
+    const user = await User.findOne({
+      $or: [
+        { username: normalizedEmail },
+        { email: normalizedEmail }
+      ]
+    });
     if (user) {
       const token = crypto.randomBytes(32).toString('hex');
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -185,7 +218,7 @@ router.post('/forgot-password', passwordResetRequestLimiter, async (req, res, ne
         expiresAt: new Date(Date.now() + 60 * 60 * 1000)
       });
       try {
-        await sendPasswordResetEmail({ config, email: user.username, token });
+        await sendPasswordResetEmail({ config, email: user.email || normalizedEmail, token });
       } catch (error) {
         await PasswordResetToken.deleteOne({ tokenHash });
         console.error('Unable to send password reset email:', error.message);
@@ -267,6 +300,13 @@ router.post('/request-access', authenticate, async (req, res, next) => {
     }
     req.user.status = 'pending';
     await req.user.save();
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'access.requested',
+      title: 'Access requested',
+      message: `${req.user.name} requested access to the group tracker.`,
+      actorId: req.user._id
+    });
     res.status(200).json({
       message: 'Access request submitted for administrator approval',
       user: publicUser(req.user)
@@ -296,6 +336,42 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     res.clearCookie(cookieName, { ...config.cookie, maxAge: undefined });
     res.json({ message: 'Password changed. Please sign in again.' });
   } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/email', authenticate, async (req, res, next) => {
+  try {
+    const { email, currentPassword } = req.body || {};
+    if (typeof email !== 'string' || typeof currentPassword !== 'string' ||
+        (email.trim() && !validateEmail(email))) {
+      return res.status(400).json({ error: 'Provide a valid email address and current password' });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const user = await User.findById(req.user._id).select('+passwordHash');
+    if (!user || !await bcrypt.compare(currentPassword, user.passwordHash)) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+    if (normalizedEmail) {
+      const conflictingUser = await User.findOne({
+        _id: { $ne: user._id },
+        $or: [
+          { username: normalizedEmail },
+          { email: normalizedEmail }
+        ]
+      });
+      if (conflictingUser) {
+        return res.status(409).json({ error: 'Email is already in use' });
+      }
+      user.email = normalizedEmail;
+    } else {
+      user.email = undefined;
+    }
+    await user.save();
+    res.json({ user: publicUser(user) });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) return res.status(409).json({ error: 'Email is already in use' });
     next(error);
   }
 });

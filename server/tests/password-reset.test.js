@@ -51,11 +51,53 @@ test('forgot password responds identically when no account matches the email', a
     await getRouteHandler('/forgot-password')(req, res, (error) => {
       throw error;
     });
-    assert.deepEqual(query, { username: 'admin@example.com' });
+    assert.deepEqual(query, {
+      $or: [
+        { username: 'admin@example.com' },
+        { email: 'admin@example.com' }
+      ]
+    });
     assert.equal(res.statusCode, 200);
     assert.match(res.payload.message, /If an account exists/);
   } finally {
     User.findOne = originalFindOne;
+  }
+});
+
+test('forgot password finds a separate stored email and sends the reset link there', async () => {
+  const originalFindOne = User.findOne;
+  const originalDeleteMany = PasswordResetToken.deleteMany;
+  const originalCreate = PasswordResetToken.create;
+  const originalCreateTransport = nodemailer.createTransport;
+  let query;
+  let message;
+  User.findOne = async (value) => {
+    query = value;
+    return { _id: 'user-id', username: 'member-name', email: 'member@example.com' };
+  };
+  PasswordResetToken.deleteMany = async () => ({ deletedCount: 0 });
+  PasswordResetToken.create = async (value) => value;
+  nodemailer.createTransport = () => ({
+    sendMail: async (value) => { message = value; }
+  });
+  try {
+    await getRouteHandler('/forgot-password')(
+      { body: { email: 'member@example.com' } },
+      createResponse(),
+      (error) => { throw error; }
+    );
+    assert.deepEqual(query, {
+      $or: [
+        { username: 'member@example.com' },
+        { email: 'member@example.com' }
+      ]
+    });
+    assert.equal(message.to, 'member@example.com');
+  } finally {
+    User.findOne = originalFindOne;
+    PasswordResetToken.deleteMany = originalDeleteMany;
+    PasswordResetToken.create = originalCreate;
+    nodemailer.createTransport = originalCreateTransport;
   }
 });
 

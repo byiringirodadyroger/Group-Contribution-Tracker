@@ -7,7 +7,7 @@ import PasswordInput from "../components/PasswordInput";
 
 export default function RegisterPage() {
   const [members, setMembers] = useState([]);
-  const [form, setForm] = useState({ name: "", username: "", password: "", memberId: "" });
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", memberId: "" });
   const [error, setError] = useState("");
   const [profilesError, setProfilesError] = useState("");
   const [loadingProfiles, setLoadingProfiles] = useState(true);
@@ -64,7 +64,8 @@ export default function RegisterPage() {
       <form className="mt-7 space-y-4" onSubmit={submit}>
         <label className="block text-sm font-semibold text-slate-700">Your name<input className="field mt-2" autoComplete="name" required maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
         <label className="block text-sm font-semibold text-slate-700">Group member profile<select className="field mt-2" required disabled={loadingProfiles || Boolean(profilesError) || members.length === 0} value={form.memberId} onChange={(e) => setForm({ ...form, memberId: e.target.value })}><option value="">{loadingProfiles ? "Loading member profiles..." : members.length ? "Select your name" : "No profiles available"}</option>{members.map((m) => <option key={m._id || m.id} value={m._id || m.id}>{m.name}</option>)}</select></label>
-        <label className="block text-sm font-semibold text-slate-700">Username<input className="field mt-2" autoComplete="username" required minLength={3} maxLength={32} value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></label>
+        <label className="block text-sm font-semibold text-slate-700">Username or email address<input className="field mt-2" autoComplete="username" autoCapitalize="none" required minLength={3} maxLength={254} placeholder="Username or name@example.com" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} /></label>
+        <label className="block text-sm font-semibold text-slate-700">Additional sign-in email (optional)<input className="field mt-2" type="email" autoComplete="email" maxLength={254} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /><span className="mt-1 block text-xs font-normal text-slate-400">You can use this email as an alternative to your username when signing in.</span></label>
         <label className="block text-sm font-semibold text-slate-700">Password<PasswordInput className="field mt-2 pr-12" autoComplete="new-password" required minLength={10} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /><span className="mt-1 block text-xs font-normal text-slate-400">Use at least 10 characters.</span></label>
         <button className="button-primary mt-2 w-full" disabled={busy || loadingProfiles || Boolean(profilesError) || members.length === 0}>{busy ? <Spinner /> : "Submit approval request"}</button>
       </form>

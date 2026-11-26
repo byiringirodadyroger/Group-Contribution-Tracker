@@ -30,7 +30,7 @@ export default function ForgotPasswordPage() {
       <div className="mb-6 grid h-11 w-11 place-items-center rounded-xl bg-forest-50 text-forest-700"><Mail size={21} /></div>
       <p className="text-sm font-semibold text-forest-600">Account recovery</p>
       <h1 className="mt-2 text-3xl font-bold tracking-tight">Forgot your password?</h1>
-      <p className="mt-2 text-sm text-slate-500">Enter the email address you use to sign in. If it matches an account, we’ll send a reset link.</p>
+      <p className="mt-2 text-sm text-slate-500">Enter the email address registered as your username. If it matches an account, we’ll send a reset link.</p>
       <Alert className="mt-6">{error}</Alert>
       <Alert className="mt-6" kind="success">{message}</Alert>
       <form className="mt-7 space-y-5" onSubmit={submit}>

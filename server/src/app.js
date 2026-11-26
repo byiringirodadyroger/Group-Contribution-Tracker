@@ -16,6 +16,8 @@ const authRoutes = require('./routes/auth');
 const dataRoutes = require('./routes/data');
 const paymentRoutes = require('./routes/payments');
 const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
+const chatRoutes = require('./routes/chat');
 
 const config = loadConfig();
 const app = express();
@@ -75,6 +77,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api', dataRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 
 const clientDist = path.resolve(__dirname, '../../client/dist');
 app.use(express.static(clientDist));

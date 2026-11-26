@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, lowercase: true, trim: true },
+  email: { type: String, lowercase: true, trim: true },
   name: { type: String, required: true, trim: true },
   normalizedName: { type: String, required: true, index: true },
   passwordHash: { type: String, required: true, select: false },
@@ -20,6 +21,7 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.index({ username: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ memberId: 1 }, { unique: true });
 userSchema.index({ status: 1, role: 1 });
 

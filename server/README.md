@@ -111,21 +111,48 @@ API clients may send credentials in the Authorization header instead of using th
 Registered and pending accounts can sign in and use `/api/auth/me` to inspect
 their status. They cannot access group, payment, admin, or Socket.IO features
 until an administrator approves the pending request. Inactive accounts cannot
-sign in. Names must match an available regular member. Both the username and
-member ownership are unique.
+sign in. Names must match an available regular member. Usernames, optional
+sign-in email addresses, and member ownership are unique. A signed-in user can
+add or change their email from account settings after confirming their password.
+
+## In-app notifications
+
+Approved users see notifications for member account creation and access
+requests, account approval or deactivation, member additions, and contributions
+being recorded, updated, or removed. Notifications are shared with all approved
+users, stored in the database, and delivered live over the authenticated
+Socket.IO connection. Each user has a separate read state.
+
+Chat attachments of any file type up to 50 MB are streamed into MongoDB GridFS.
+Ensure the configured MongoDB database has enough storage for uploaded files.
 
 ## API
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| POST | `/api/auth/register` | Public | `{name, username, password, memberId}` or `memberName`; creates `registered` account |
-| POST | `/api/auth/login` | Public | `{username, password}` where username may be an email address; sets auth cookie |
+| POST | `/api/auth/register` | Public | `{name, username, email?, password, memberId}` or `memberName`; `username` accepts a username or email address |
+| POST | `/api/auth/login` | Public | `{username, password}` where the identifier may be a username or registered email; sets auth cookie |
 | POST | `/api/auth/forgot-password` | Public | `{email}` sends a time-limited reset link when an account exists |
 | POST | `/api/auth/reset-password` | Public | `{token, newPassword}` consumes a one-time reset link |
 | POST | `/api/auth/logout` | Public | Clears auth cookie |
 | GET | `/api/auth/me` | Signed in | Current account, including restricted status |
 | POST | `/api/auth/request-access` | Signed in | Changes `registered` account to `pending` |
 | POST | `/api/auth/change-password` | Signed in | `{currentPassword, newPassword}` |
+| PUT | `/api/auth/email` | Signed in | `{email, currentPassword}` adds, changes, or removes the optional sign-in email |
+| GET | `/api/notifications` | Approved user | Latest notifications and the current user's unread count |
+| PATCH | `/api/notifications/:id/read` | Approved user | Marks one notification as read |
+| PATCH | `/api/notifications/read-all` | Approved user | Marks all notifications as read |
+| GET | `/api/chat/contacts` | Approved user | Active member chat contacts |
+| GET | `/api/chat/group` | Approved user | Latest 50 group messages with read-receipt user IDs |
+| POST | `/api/chat/group` | Approved user | `{text}` sends a group message |
+| POST | `/api/chat/group/files` | Approved user | Multipart `file` and optional `text`; files up to 50 MB |
+| POST | `/api/chat/group/read` | Approved user | Marks the latest incoming group messages as read |
+| GET | `/api/chat/direct/:userId` | Approved user | Latest 50 messages in a direct conversation |
+| POST | `/api/chat/direct/:userId` | Approved user | `{text}` sends a direct message |
+| POST | `/api/chat/direct/:userId/files` | Approved user | Multipart `file` and optional `text`; files up to 50 MB |
+| POST | `/api/chat/direct/:userId/read` | Approved user | Marks incoming direct messages as read |
+| GET | `/api/chat/attachments/:messageId` | Conversation participant | Downloads a message attachment |
+| DELETE | `/api/chat/messages/:messageId` | Approved user | `{scope:"me"}` hides for the current user; sender may use `{scope:"everyone"}` within 15 minutes |
 | GET | `/api/auth/registration-options` | Public | Available regular members |
 | GET | `/api/dashboard` | Approved user | Group and per-member contribution totals |
 | GET | `/api/members` | Approved user | Active members with targets and totals |

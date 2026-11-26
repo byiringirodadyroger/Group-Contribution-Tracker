@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 const {
   normalizeName,
   normalizeUsername,
+  normalizeEmail,
   validateUsername,
+  validateEmail,
   validateLoginIdentifier,
   validatePassword,
   validateMemberName,
@@ -17,6 +19,7 @@ const Payment = require('../src/models/Payment');
 test('normalizes names and usernames consistently', () => {
   assert.equal(normalizeName('  Member   One '), 'member one');
   assert.equal(normalizeUsername('  ROGER '), 'roger');
+  assert.equal(normalizeEmail('  MEMBER@Example.com '), 'member@example.com');
 });
 
 test('validates account identifiers and passwords', () => {
@@ -27,6 +30,8 @@ test('validates account identifiers and passwords', () => {
   assert.equal(validateLoginIdentifier('byiringirodadyroger@gmail.com'), true);
   assert.equal(validateLoginIdentifier('not-an-email@'), false);
   assert.equal(validateLoginIdentifier(`a@${'b'.repeat(250)}.com`), false);
+  assert.equal(validateEmail('member@example.com'), true);
+  assert.equal(validateEmail('invalid-email'), false);
   assert.equal(validatePassword('long-enough-password'), true);
   assert.equal(validatePassword('short'), false);
   assert.equal(validatePassword('x'.repeat(129)), false);
@@ -124,6 +129,9 @@ test('accounts support registered, pending, active, and inactive states with reg
     memberId: new mongoose.Types.ObjectId()
   });
   assert.equal(user.status, 'registered');
+  assert.equal(User.schema.path('email').options.required, undefined);
+  assert.ok(User.schema.indexes().some(([keys, options]) =>
+    keys.email === 1 && options.unique && options.sparse));
   await assert.doesNotReject(user.validate());
   user.status = 'pending';
   await assert.doesNotReject(user.validate());
@@ -142,8 +150,16 @@ test('admin deactivation clears approval metadata for previously approved accoun
   process.env.CORS_ORIGINS = 'http://localhost:5173';
   const adminRouter = require('../src/routes/admin');
   const User = require('../src/models/User');
+  const Notification = require('../src/models/Notification');
   const accountId = new mongoose.Types.ObjectId();
   const adminId = new mongoose.Types.ObjectId('111111111111111111111111');
+  const originalNotificationCreate = Notification.create;
+  Notification.create = async (value) => ({
+    ...value,
+    _id: new mongoose.Types.ObjectId(),
+    createdAt: new Date(),
+    readBy: []
+  });
   const routeLayer = adminRouter.stack.find((layer) => layer.route && layer.route.path === '/accounts/:id/status');
   assert.ok(routeLayer);
   const handler = routeLayer.route.stack[0].handle;
@@ -168,7 +184,8 @@ test('admin deactivation clears approval metadata for previously approved accoun
     user: { _id: adminId },
     app: {
       get: () => ({
-        in: () => ({ disconnectSockets: () => {} })
+        in: () => ({ disconnectSockets: () => {} }),
+        to: () => ({ emit: () => {} })
       })
     }
   };
@@ -183,4 +200,5 @@ test('admin deactivation clears approval metadata for previously approved accoun
   assert.equal(account.status, 'inactive');
   assert.equal(account.approvedBy, null);
   assert.equal(account.approvedAt, null);
+  Notification.create = originalNotificationCreate;
 });

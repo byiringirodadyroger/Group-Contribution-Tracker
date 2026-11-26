@@ -14,6 +14,7 @@ import AddPaymentPage from "./pages/AddPaymentPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminPage from "./pages/AdminPage";
 import AccessRequestPage from "./pages/AccessRequestPage";
+import ChatPage from "./pages/ChatPage";
 
 function Protected({ children, admin = false }) {
   const { user, loading } = useAuth();
@@ -46,6 +47,7 @@ export default function App() {
       <Route path="/payments" element={<PrivatePage><PaymentsPage /></PrivatePage>} />
       <Route path="/payments/new" element={<PrivatePage admin><AddPaymentPage /></PrivatePage>} />
       <Route path="/settings" element={<PrivatePage><SettingsPage /></PrivatePage>} />
+      <Route path="/chat" element={<PrivatePage><ChatPage /></PrivatePage>} />
       <Route path="/admin" element={<PrivatePage admin><AdminPage /></PrivatePage>} />
       <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
     </Routes>

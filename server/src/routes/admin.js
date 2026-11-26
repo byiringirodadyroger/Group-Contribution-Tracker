@@ -2,7 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Member = require('../models/Member');
+const Payment = require('../models/Payment');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { createNotification } = require('../services/notifications');
 const { normalizeName, validateMemberName, isDuplicateKeyError } = require('../utils/validation');
 
 const router = express.Router();
@@ -70,6 +72,15 @@ router.patch('/accounts/:id/approval', async (req, res, next) => {
       account.approvedAt = null;
     }
     await account.save();
+    await createNotification({
+      io: req.app.get('io'),
+      type: body.status === 'active' ? 'account.approved' : 'account.deactivated',
+      title: body.status === 'active' ? 'Member access approved' : 'Member access changed',
+      message: body.status === 'active'
+        ? `${account.name} was approved to access the group tracker.`
+        : `${account.name}'s access was set to inactive.`,
+      actorId: req.user._id
+    });
     if (account.status !== 'active') {
       req.app.get('io').in(`user:${account._id}`).disconnectSockets(true);
     }
@@ -100,6 +111,13 @@ router.patch('/accounts/:id/status', async (req, res, next) => {
     account.approvedBy = null;
     account.approvedAt = null;
     await account.save();
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'account.deactivated',
+      title: 'Member access changed',
+      message: `${account.name}'s access was set to inactive.`,
+      actorId: req.user._id
+    });
     req.app.get('io').in(`user:${account._id}`).disconnectSockets(true);
     res.json({ account: accountView(account) });
   } catch (error) {
@@ -122,7 +140,60 @@ router.delete('/accounts/:id', async (req, res, next) => {
       return res.status(403).json({ error: 'Only unrequested or rejected member accounts can be removed' });
     }
     await account.deleteOne();
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'account.removed',
+      title: 'Member account removed',
+      message: `The unapproved account for ${account.name} was removed.`,
+      actorId: req.user._id
+    });
     res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/report', async (req, res, next) => {
+  try {
+    const [members, totals] = await Promise.all([
+      Member.find({ isActive: true }).sort({ name: 1 }).lean(),
+      Payment.aggregate([
+        { $group: { _id: '$memberId', contributed: { $sum: '$amount' }, paymentCount: { $sum: 1 } } }
+      ])
+    ]);
+    const totalsByMember = new Map(totals.map((entry) => [entry._id.toString(), entry]));
+    const reportMembers = members.map((member) => {
+      const total = totalsByMember.get(member._id.toString()) || { contributed: 0, paymentCount: 0 };
+      const contributed = total.contributed || 0;
+      const remaining = Math.max(member.targetAmount - contributed, 0);
+      const progressPercent = member.targetAmount
+        ? Math.min(100, Math.round((contributed / member.targetAmount) * 100))
+        : 0;
+      return {
+        id: member._id,
+        name: member.name,
+        targetAmount: member.targetAmount,
+        contributed,
+        remaining,
+        progressPercent,
+        paymentCount: total.paymentCount || 0,
+        status: contributed >= member.targetAmount ? 'Fully paid' : contributed > 0 ? 'Partially paid' : 'Not started'
+      };
+    });
+    const targetAmount = reportMembers.reduce((sum, member) => sum + member.targetAmount, 0);
+    const totalCollected = reportMembers.reduce((sum, member) => sum + member.contributed, 0);
+    res.json({
+      generatedAt: new Date().toISOString(),
+      generatedBy: { id: req.user._id, name: req.user.name },
+      summary: {
+        memberCount: reportMembers.length,
+        targetAmount,
+        totalCollected,
+        remaining: Math.max(targetAmount - totalCollected, 0),
+        progressPercent: targetAmount ? Math.min(100, Math.round((totalCollected / targetAmount) * 100)) : 0
+      },
+      members: reportMembers
+    });
   } catch (error) {
     next(error);
   }
@@ -163,6 +234,13 @@ router.post('/members', async (req, res, next) => {
       targetAmount: 20000,
       isAdminMember: false,
       isActive: true
+    });
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'member.created',
+      title: 'New group member',
+      message: `${req.user.name} added ${member.name} to the group.`,
+      actorId: req.user._id
     });
     return res.status(201).json({
       member: {

@@ -4,6 +4,7 @@ const Member = require('../models/Member');
 const Payment = require('../models/Payment');
 const AuditLog = require('../models/AuditLog');
 const { authenticate, requireApproved, requireAdmin } = require('../middleware/auth');
+const { createNotification } = require('../services/notifications');
 const { validatePositiveRwf, isDuplicateKeyError } = require('../utils/validation');
 
 const router = express.Router();
@@ -116,6 +117,13 @@ router.post('/', requireAdmin, async (req, res, next) => {
       .lean();
     populated.recordedBy = populated.createdBy;
     req.app.get('io').to('approved-users').emit('payment:created', responsePayment(populated));
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'payment.created',
+      title: 'Contribution recorded',
+      message: `${req.user.name} recorded RWF ${populated.amount} for ${populated.memberId.name}.`,
+      actorId: req.user._id
+    });
     res.status(201).json({ payment: responsePayment(populated) });
   } catch (error) {
     if (isDuplicateKeyError(error)) {
@@ -164,6 +172,13 @@ router.patch('/:id', requireAdmin, async (req, res, next) => {
       .lean();
     populated.recordedBy = populated.createdBy;
     req.app.get('io').to('approved-users').emit('payment:updated', responsePayment(populated));
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'payment.updated',
+      title: 'Contribution updated',
+      message: `${req.user.name} updated the RWF ${populated.amount} contribution for ${populated.memberId.name}.`,
+      actorId: req.user._id
+    });
     res.json({ payment: responsePayment(populated) });
   } catch (error) {
     if (isDuplicateKeyError(error)) {
@@ -181,6 +196,7 @@ router.delete('/:id', requireAdmin, async (req, res, next) => {
     const payment = await Payment.findById(req.params.id);
     if (!payment) return res.status(404).json({ error: 'Payment not found' });
     const before = paymentSnapshot(payment);
+    const member = await Member.findById(payment.memberId).select('name');
     await payment.deleteOne();
     await AuditLog.create({
       actorId: req.user._id,
@@ -190,6 +206,13 @@ router.delete('/:id', requireAdmin, async (req, res, next) => {
       after: null
     });
     req.app.get('io').to('approved-users').emit('payment:deleted', { id: payment._id });
+    await createNotification({
+      io: req.app.get('io'),
+      type: 'payment.deleted',
+      title: 'Contribution removed',
+      message: `${req.user.name} removed a RWF ${before.amount} contribution${member ? ` for ${member.name}` : ''}.`,
+      actorId: req.user._id
+    });
     res.status(204).end();
   } catch (error) {
     next(error);
